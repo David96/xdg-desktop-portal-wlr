@@ -1,5 +1,6 @@
 #include "remotedesktop.h"
 
+#include <errno.h>
 #include <spa/utils/result.h>
 #include <time.h>
 
@@ -139,7 +140,7 @@ static int method_remotedesktop_select_devices(sd_bus_message *msg, void *data,
 	sess = get_session_from_handle(state, session_handle);
 	if (!sess) {
 		logprint(WARN, "remotedesktop: select devices: session not found");
-		return -1;
+		return -ENOENT;
 	}
 	logprint(DEBUG, "remotedesktop: select devices: session found");
 
@@ -214,7 +215,7 @@ static int method_remotedesktop_start(sd_bus_message *msg, void *data, sd_bus_er
 	sess = get_session_from_handle(state, session_handle);
 	if (!sess) {
 		logprint(WARN, "remotedesktop: start: session not found");
-		return -1;
+		return -ENOENT;
 	}
 	logprint(DEBUG, "remotedesktop: start: session found");
 	struct xdpw_screencast_instance *cast = sess->screencast_data.screencast_instance;

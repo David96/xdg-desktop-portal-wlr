@@ -66,11 +66,11 @@ int xdpw_virtual_input_init(struct xdpw_state *state) {
 
 	logprint(DEBUG, "wayland: registry listeners run");
 
-	// make sure our wlroots supports virtual-pointer protocol
+	// Remove pointer from allowed devices if the protocol isn't supported
 	if (!ctx->virtual_pointer_manager) {
-		logprint(ERROR, "Compositor doesn't support %s!",
+		logprint(WARN, "Compositor doesn't support %s!",
 			zwlr_virtual_pointer_manager_v1_interface.name);
-		return -1;
+		state->config->remotedesktop_conf.allowed_devices &= ~POINTER;
 	}
 
 	// make sure our wlroots supports virtual-keyboard protocol

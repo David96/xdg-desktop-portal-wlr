@@ -36,14 +36,14 @@ static int get_session_from_sd_bus(sd_bus_message *msg, struct xdpw_state *state
 	*sess = get_session_from_handle(state, session_handle);
 	if (!*sess) {
 		logprint(WARN, "remotedesktop: session not found");
-		return -1;
+		return -ENOENT;
 	}
 	logprint(TRACE, "remotedesktop: session found");
 
 	if (!((*sess)->remotedesktop_data.devices & device_type)) {
 		logprint(ERROR, "remotedesktop: remote tried to control forbidden device type %u!",
 			device_type);
-		return -2;
+		return -EPERM;
 	}
 	return 0;
 }
@@ -239,8 +239,12 @@ static int method_remotedesktop_start(sd_bus_message *msg, void *data, sd_bus_er
 	}
 
 	remote = &sess->remotedesktop_data;
-	remote->virtual_pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(
-		state->remotedesktop.virtual_pointer_manager, NULL);
+	struct wl_output *output = NULL;
+	if (cast && cast->target->output) {
+		output = cast->target->output->output;
+	}
+	remote->virtual_pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer_with_output(
+			state->remotedesktop.virtual_pointer_manager, NULL, output);
 
 	// TODO: make this user configureable
 	struct xkb_rule_names rule_names = {
@@ -436,6 +440,7 @@ static int method_remotedesktop_notify_pointer_motion_absolute(
 	int ret = 0;
 	struct xdpw_session *sess;
 	double x = 0, y = 0;
+	uint32_t stream_id;
 
 	logprint(TRACE, "remotedesktop: npma: method invoked");
 	ret = get_session_from_sd_bus(msg, state, POINTER, &sess);
@@ -447,7 +452,7 @@ static int method_remotedesktop_notify_pointer_motion_absolute(
 	if (ret < 0) {
 		return ret;
 	}
-	ret = sd_bus_message_skip(msg, "u");
+	ret = sd_bus_message_read(msg, "u", &stream_id);
 	if (ret < 0) {
 		return ret;
 	}
@@ -456,10 +461,26 @@ static int method_remotedesktop_notify_pointer_motion_absolute(
 		return ret;
 	}
 
-	struct xdpw_wlr_output *output = sess->screencast_data.screencast_instance->target->output;
-	zwlr_virtual_pointer_v1_motion_absolute(sess->remotedesktop_data.virtual_pointer,
-		get_time_ms(), x, y, output->width, output->height);
-	zwlr_virtual_pointer_v1_frame(sess->remotedesktop_data.virtual_pointer);
+	struct xdpw_screencast_instance *cast = sess->screencast_data.screencast_instance;
+
+	// This function requires a running screencast, which the coordinates are relative to
+	if (!cast || stream_id != cast->node_id) {
+		logprint(WARN, "remotedesktop: npma: called with invalid stream node id");
+		return -ENOENT;
+	}
+
+	struct xdpw_wlr_output *output = cast->target->output;
+
+	if (output) {
+		zwlr_virtual_pointer_v1_motion_absolute(sess->remotedesktop_data.virtual_pointer,
+			get_time_ms(), x, y, output->width, output->height);
+		zwlr_virtual_pointer_v1_frame(sess->remotedesktop_data.virtual_pointer);
+	} else {
+		// TODO: handle toplevel as a target.
+		// Requires transformation of toplevel local coordinates to screen coordinates
+		logprint(ERROR, "remotedesktop: npma: not implement for toplevel capture");
+		return -ENOENT;
+	}
 
 	return 0;
 }
@@ -605,7 +626,7 @@ static int method_remotedesktop_notify_pointer_axis_discrete(
 	}
 
 	zwlr_virtual_pointer_v1_axis_discrete(sess->remotedesktop_data.virtual_pointer,
-			get_time_ms(), axis, wl_fixed_from_double(0.1), steps);
+			get_time_ms(), axis, wl_fixed_from_double(0.1 * steps), steps);
 	zwlr_virtual_pointer_v1_frame(sess->remotedesktop_data.virtual_pointer);
 	return 0;
 }

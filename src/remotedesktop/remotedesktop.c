@@ -340,7 +340,8 @@ static int method_remotedesktop_start(sd_bus_message *msg, void *data, sd_bus_er
 		if (ret < 0) {
 			return ret;
 		}
-		if (cast->target->output->xdg_output) {
+		// TODO: if cast->target->toplevel, append the toplevel coordinates & size
+		if (cast->target->output && cast->target->output->xdg_output) {
 			ret = sd_bus_message_append(reply, "{sv}",
 				"position", "(ii)", cast->target->output->x, cast->target->output->y);
 			if (ret < 0) {

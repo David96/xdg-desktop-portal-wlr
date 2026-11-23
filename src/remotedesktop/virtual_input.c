@@ -73,11 +73,11 @@ int xdpw_virtual_input_init(struct xdpw_state *state) {
 		state->config->remotedesktop_conf.allowed_devices &= ~POINTER;
 	}
 
-	// make sure our wlroots supports virtual-keyboard protocol
+	// Remove keyboard from allowed devices if the protocol isn't supported
 	if (!ctx->virtual_keyboard_manager) {
-		logprint(ERROR, "Compositor doesn't support %s!",
+		logprint(WARN, "Compositor doesn't support %s!",
 			zwp_virtual_keyboard_manager_v1_interface.name);
-		return -1;
+		state->config->remotedesktop_conf.allowed_devices &= ~KEYBOARD;
 	}
 
 	return 0;

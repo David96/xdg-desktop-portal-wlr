@@ -16,7 +16,8 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#pragma once
+#ifndef KEYBOARD_H
+#define KEYBOARD_H
 
 #include <stdlib.h>
 #include <xkbcommon/xkbcommon.h>
@@ -28,21 +29,22 @@ struct zwp_virtual_keyboard_v1;
 struct table_entry;
 
 struct keyboard {
-	struct zwp_virtual_keyboard_v1* virtual_keyboard;
+	struct zwp_virtual_keyboard_v1 *virtual_keyboard;
 
-	struct xkb_context* context;
-	struct xkb_keymap* keymap;
-	struct xkb_state* state;
+	struct xkb_context *context;
+	struct xkb_keymap *keymap;
+	struct xkb_state *state;
 
 	size_t lookup_table_size;
 	size_t lookup_table_length;
-	struct table_entry* lookup_table;
+	struct table_entry *lookup_table;
 
 	struct intset key_state;
 };
 
-int keyboard_init(struct keyboard* self, const struct xkb_rule_names* rule_names);
-void keyboard_destroy(struct keyboard* self);
-void keyboard_feed(struct keyboard* self, xkb_keysym_t symbol, bool is_pressed);
-void keyboard_feed_code(struct keyboard* self, xkb_keycode_t code,
-		bool is_pressed);
+int keyboard_init(struct keyboard *self, const struct xkb_rule_names *rule_names);
+void keyboard_destroy(struct keyboard *self);
+void keyboard_feed(struct keyboard *self, xkb_keysym_t symbol, bool is_pressed);
+void keyboard_feed_code(struct keyboard *self, xkb_keycode_t code, bool is_pressed);
+
+#endif

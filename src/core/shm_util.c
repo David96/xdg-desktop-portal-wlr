@@ -41,8 +41,9 @@ int anonymous_shm_open(void) {
 int shm_alloc_fd(size_t size)
 {
 	int fd = anonymous_shm_open();
-	if (fd < 0)
+	if (fd < 0) {
 		return -1;
+	}
 
 	int ret;
 	do {
